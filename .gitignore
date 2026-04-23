@@ -1,0 +1,103 @@
+# ============================================================================
+# Build artifacts (MSVC / Visual Studio 2010+)
+# ============================================================================
+*.exe
+*.pdb
+*.ilk
+*.map
+*.obj
+*.idb
+*.lib
+*.exp
+*.dll
+*.res
+*.tlog
+*.lastbuildstate
+*.unsuccessfulbuild
+*.pch
+*.ipch
+
+# Visual Studio solution/project user-specific & cache files
+*.suo
+*.sdf
+*.opensdf
+*.VC.db
+*.VC.opendb
+*.vcxproj.user
+*.user
+.vs/
+ipch/
+
+# Build output directories
+[Dd]ebug/
+[Rr]elease/
+[Ww]in32/
+[Xx]64/
+[Bb]uild/
+[Bb]in/
+[Oo]bj/
+
+# ============================================================================
+# DEFCON runtime outputs (regenerated on every run)
+# ============================================================================
+debug.txt
+blackbox.txt
+preferences.txt
+
+# ============================================================================
+# Large binary assets (restore from backup locally when needed)
+# ============================================================================
+sounds.dat
+*.dat
+
+# ============================================================================
+# Archives (don't commit snapshots to repo)
+# ============================================================================
+*.7z
+*.zip
+*.rar
+*.tar
+*.tar.gz
+*.tgz
+
+# ============================================================================
+# Backups / scratch
+# ============================================================================
+*.old
+*.bak
+*.orig
+*.swp
+*~
+
+# ============================================================================
+# Editor / IDE
+# ============================================================================
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# ============================================================================
+# OS junk
+# ============================================================================
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msm
+*.msp
+*.lnk
+
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
