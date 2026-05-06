@@ -103,9 +103,51 @@ Fixed asin( const Fixed& _x )
 
 Fixed acos(const Fixed& _x)
 {
-	// Return results bween pi and 0  pi/2 - (-pi/2) = pi... 
+	// Return results bween pi and 0  pi/2 - (-pi/2) = pi...
 	// pi/2 - (pi/2) = 0
 	return fixed64::piOverTwo - asin(_x);
+}
+
+Fixed tan( const Fixed& _x )
+{
+	return sin( _x ) / cos( _x );
+}
+
+Fixed atan2( const Fixed& _y, const Fixed& _x )
+{
+	if( _x == fixed64::zero && _y == fixed64::zero )
+	{
+		return fixed64::zero;
+	}
+	if( _x == fixed64::zero )
+	{
+		return _y > fixed64::zero ? fixed64::piOverTwo : fixed64::minusPiOverTwo;
+	}
+
+	Fixed absX = _x; if( absX < fixed64::zero ) absX = -absX;
+	Fixed absY = _y; if( absY < fixed64::zero ) absY = -absY;
+
+	bool swapped = false;
+	Fixed num, den;
+	if( absY <= absX ) { num = absY; den = absX; }
+	else { num = absX; den = absY; swapped = true; }
+
+	Fixed z = num / den;
+	Fixed denom = sqrt( fixed64::one + z * z );
+	Fixed principal = asin( z / denom );
+
+	if( swapped ) principal = fixed64::piOverTwo - principal;
+
+	const Fixed pi = fixed64::piOverTwo + fixed64::piOverTwo;
+
+	if( _x > fixed64::zero )
+	{
+		return _y >= fixed64::zero ? principal : -principal;
+	}
+	else
+	{
+		return _y >= fixed64::zero ? (pi - principal) : (principal - pi);
+	}
 }
 
 std::ostream& operator << (std::ostream& _os, const Fixed& _f)

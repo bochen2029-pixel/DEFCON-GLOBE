@@ -96,6 +96,8 @@ Fixed max(const Fixed &a, const Fixed &b);
 Fixed sqrt(const Fixed& _x);
 Fixed sin(const Fixed& _x);
 Fixed cos(const Fixed& _x);
+Fixed tan(const Fixed& _x);
+Fixed atan2(const Fixed& _y, const Fixed& _x);
 
 // For debugging
 std::ostream& operator << (std::ostream& _os, const Fixed& _f);

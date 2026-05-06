@@ -238,6 +238,8 @@ Fixed sin(const Fixed &f);
 Fixed cos(const Fixed &f);
 Fixed asin( const Fixed& _x );
 Fixed acos( const Fixed& _x );
+Fixed tan( const Fixed& _x );
+Fixed atan2( const Fixed& _y, const Fixed& _x );
 
 // For debugging
 std::ostream& operator << (std::ostream& _os, const Fixed& _f);

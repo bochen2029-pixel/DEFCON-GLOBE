@@ -438,17 +438,92 @@ Fixed acos(const Fixed& _x)
 }
 
 
+Fixed tan( const Fixed &_x )
+{
+	// tan(x) = sin(x) / cos(x).  Deterministic via the existing Fixed
+	// sin/cos table-based primitives.  Caller is responsible for
+	// avoiding cos(x) = 0 (pi/2 + n*pi).
+	return sin( _x ) / cos( _x );
+}
+
+
+Fixed atan2( const Fixed &_y, const Fixed &_x )
+{
+	// Reduce to asin via:  atan(z) = asin( z / sqrt(1 + z^2) )
+	// Then quadrant-correct from (sign(_x), sign(_y)).
+	//
+	// Special cases first - avoids divide-by-zero and hits exact
+	// results for axis-aligned inputs.
+	if( _x == fixed64::zero && _y == fixed64::zero )
+	{
+		return fixed64::zero;
+	}
+	if( _x == fixed64::zero )
+	{
+		return _y > fixed64::zero ? fixed64::piOverTwo : fixed64::minusPiOverTwo;
+	}
+
+	// Normalize the principal-value argument.
+	Fixed absX = _x;
+	if( absX < fixed64::zero ) absX = -absX;
+	Fixed absY = _y;
+	if( absY < fixed64::zero ) absY = -absY;
+
+	// Use the smaller absolute over the larger to keep |z| <= 1, where
+	// the asin table is dense and accurate.
+	bool swapped = false;
+	Fixed num, den;
+	if( absY <= absX )
+	{
+		num = absY;
+		den = absX;
+	}
+	else
+	{
+		num = absX;
+		den = absY;
+		swapped = true;
+	}
+
+	Fixed z = num / den;            // 0 <= z <= 1
+	Fixed denom = sqrt( fixed64::one + z * z );
+	Fixed principal = asin( z / denom );          // [0, pi/4] roughly
+
+	// If we swapped, principal is now the complement angle.
+	if( swapped )
+	{
+		principal = fixed64::piOverTwo - principal;
+	}
+
+	// Restore signs.  Quadrants:
+	//   x>0, y>0 :  +principal
+	//   x>0, y<0 : -principal
+	//   x<0, y>0 :  pi - principal
+	//   x<0, y<0 : -(pi - principal) = principal - pi
+	const Fixed pi = fixed64::piOverTwo + fixed64::piOverTwo;
+
+	if( _x > fixed64::zero )
+	{
+		return _y >= fixed64::zero ? principal : -principal;
+	}
+	else
+	{
+		return _y >= fixed64::zero ? (pi - principal) : (principal - pi);
+	}
+}
+
+
 Fixed sqrt( const Fixed &_x )
 {
 	// See: http://en.wikipedia.org/wiki/Methods_of_computing_square_roots#Babylonian_method
 
-	// We need to use an iterative (fixed point) algorithm to 
+	// We need to use an iterative (fixed point) algorithm to
 	// approximate sqrt. We use babylonian algorithm:
 	Fixed prev = _x;
 	int iterations = 0;
-	
+
 	assert(_x >= fixed64::zero);
-	
+
 	do {
 		Fixed next = fixed64::half * ( prev + _x / prev );
 		if (next == prev || ++iterations == 20)
