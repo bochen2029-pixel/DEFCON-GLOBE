@@ -31,6 +31,7 @@
 
 #include "world/world.h"
 #include "world/explosion.h"
+#include "world/sphere.h"
 
 #include "test/determinism_harness.h"
 #include "world/silo.h"
@@ -2684,52 +2685,41 @@ int World::GetClosestNodeSlow( Fixed const &longitude, Fixed const &latitude )
 }
 
 
+//
+// Phase 1: distance is great-circle on the sphere.  The sphere has no
+// seam, so GetDistanceAcrossSeam* collapse onto the unified great-circle
+// path.  The "ignoreSeam" parameter on GetDistance / GetDistanceSqd is
+// retained for source compatibility but no longer affects the result.
+//
+// Distances are returned in degrees of arc (SPEC_AMBIGUOUS-09 resolution)
+// so existing range constants in AI / unit code keep their meaning.
+//
+
 Fixed World::GetDistanceAcrossSeamSqd( Fixed const &fromLongitude, Fixed const &fromLatitude, Fixed const &toLongitude, Fixed const &toLatitude )
 {
-    Fixed targetSeamLatitude;
-    Fixed targetSeamLongitude;
-    GetSeamCrossLatitude( Vector3<Fixed>(toLongitude, toLatitude, 0), Vector3<Fixed>(fromLongitude, fromLatitude,0), &targetSeamLongitude, &targetSeamLatitude);
-    
-
-    Fixed distanceAcrossSeam = ( Vector3<Fixed>(targetSeamLongitude, targetSeamLatitude,0) -
-                                 Vector3<Fixed>(fromLongitude, fromLatitude, 0) ).MagSquared();
-
-    distanceAcrossSeam += ( Vector3<Fixed>(targetSeamLongitude * -1, targetSeamLatitude,0) -
-                            Vector3<Fixed>(toLongitude, toLatitude, 0) ).MagSquared();
-
-    return distanceAcrossSeam;
+    return SphereGreatCircleDistanceDegSqd( fromLongitude, fromLatitude,
+                                            toLongitude,   toLatitude );
 }
 
 
 Fixed World::GetDistanceAcrossSeam( Fixed const &fromLongitude, Fixed const &fromLatitude, Fixed const &toLongitude, Fixed const &toLatitude )
 {
-    Fixed distSqd = GetDistanceAcrossSeamSqd( fromLongitude, fromLatitude, toLongitude, toLatitude );
-    return sqrt( distSqd );
+    return SphereGreatCircleDistanceDeg( fromLongitude, fromLatitude,
+                                         toLongitude,   toLatitude );
 }
 
 
-Fixed World::GetDistanceSqd( Fixed const &fromLongitude, Fixed const &fromLatitude, Fixed const &toLongitude, Fixed const &toLatitude, bool ignoreSeam )
+Fixed World::GetDistanceSqd( Fixed const &fromLongitude, Fixed const &fromLatitude, Fixed const &toLongitude, Fixed const &toLatitude, bool /*ignoreSeam*/ )
 {
-    Vector3<Fixed>from(fromLongitude, fromLatitude, 0);
-    Vector3<Fixed>to(toLongitude, toLatitude, 0);
-    Vector3<Fixed> theVector = from - to;
-    Fixed dist = theVector.MagSquared();
-    if( ignoreSeam )
-    {
-        return dist;
-    }
-    else
-    {
-        Fixed distAcrossSeam = GetDistanceAcrossSeamSqd( fromLongitude, fromLatitude, toLongitude, toLatitude );
-        return ( dist < distAcrossSeam ? dist : distAcrossSeam );
-    }
+    return SphereGreatCircleDistanceDegSqd( fromLongitude, fromLatitude,
+                                            toLongitude,   toLatitude );
 }
 
 
-Fixed World::GetDistance( Fixed const &fromLongitude, Fixed const &fromLatitude, Fixed const &toLongitude, Fixed const &toLatitude, bool ignoreSeam )
+Fixed World::GetDistance( Fixed const &fromLongitude, Fixed const &fromLatitude, Fixed const &toLongitude, Fixed const &toLatitude, bool /*ignoreSeam*/ )
 {
-    Fixed distSqd = GetDistanceSqd( fromLongitude, fromLatitude, toLongitude, toLatitude, ignoreSeam );
-    return sqrt( distSqd );
+    return SphereGreatCircleDistanceDeg( fromLongitude, fromLatitude,
+                                         toLongitude,   toLatitude );
 }
 
 
