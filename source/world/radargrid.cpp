@@ -5,6 +5,7 @@
 #include "lib/profiler.h"
 
 #include "world/radargrid.h"
+#include "world/sphere.h"
 #include "world/world.h"
 
 #include "app/app.h"
@@ -122,7 +123,12 @@ void RadarGrid::ModifyCoverage( Fixed _longitude, Fixed _latitude, Fixed _radius
     if( _teamId == -1 ) return;
 
     //
-    // Round longitude and latitude to grid square centres
+    // Phase 1: cell membership uses great-circle distance.  Bounding
+    // box widens longitudinally by 1/cos(lat) to cover the same arc
+    // span near the poles (option-alpha radar grid per
+    // SPEC_AMBIGUOUS-15 resolution: keep the flat 360x200 lat/lon
+    // structure, correct cell weights to spherical).
+    //
 
     Fixed radiusSquared = _radius * _radius;
 
@@ -130,8 +136,17 @@ void RadarGrid::ModifyCoverage( Fixed _longitude, Fixed _latitude, Fixed _radius
     GetIndices( _longitude, _latitude, centreX, centreY );
     GetWorldLocation( centreX, centreY, _longitude, _latitude );
 
+    // Lon-span widening near poles.  cos clamps at 0.05 to keep the
+    // bounding box bounded; the per-cell great-circle test prunes
+    // cells outside the actual radius.
+    Fixed cosLat = cos( _latitude * Fixed::FromDouble( 0.01745329251994 ) );
+    if( cosLat < Fixed::Hundredths( 5 ) ) cosLat = Fixed::Hundredths( 5 );
+    Fixed lonRadius = _radius / cosLat;
+
     int x0, y0, w, h;
-    GetIndices( _longitude, _latitude, _radius, x0, y0, w, h );
+    GetIndices( _longitude, _latitude, lonRadius, x0, y0, w, h );
+    // Latitude span stays at _radius (latitudinal degree of arc == 1
+    // degree of arc on the sphere irrespective of longitude).
 
     for( int x = x0; x < x0+w; ++x )
     {
@@ -141,7 +156,9 @@ void RadarGrid::ModifyCoverage( Fixed _longitude, Fixed _latitude, Fixed _radius
             Fixed thisLatitude;
             GetWorldLocation( x, y, thisLongitude, thisLatitude );
 
-            Fixed distanceSquared = (Vector3<Fixed>(_longitude, _latitude,0) - Vector3<Fixed>(thisLongitude, thisLatitude,0)).MagSquared();
+            Fixed distanceSquared = SphereGreatCircleDistanceDegSqd(
+                _longitude, _latitude, thisLongitude, thisLatitude );
+
             if( distanceSquared < radiusSquared )
             {
                 int xRadar = x;
