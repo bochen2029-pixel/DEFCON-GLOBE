@@ -3990,6 +3990,14 @@ void MapRenderer::GetPosition( float &_middleX, float &_middleY )
 
 int MapRenderer::GetLongitudeMod()
 {
+    // Phase 1 note: this and the +=GetLongitudeMod() callers
+    // (~map_renderer.cpp:284, :335, :356, :2004) are *render-only*
+    // antimeridian wrap to keep the 2D flat map visually continuous
+    // when the camera straddles +-180.  They are not gameplay seam
+    // machinery (which was MovingObject::CrossSeam and friends - all
+    // deleted in Phase 1).  GetLongitudeMod is intentionally retained
+    // until MapRenderer itself is retired in favor of GlobeRenderer
+    // (Phase 4/5 polish).
     if( m_middleX < 0 )
     {
         return 360;
