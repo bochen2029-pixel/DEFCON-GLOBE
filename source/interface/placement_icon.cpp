@@ -14,6 +14,7 @@
 #include "network/ClientToServer.h"
 
 #include "renderer/map_renderer.h"
+#include "renderer/render_util.h"
 
 #include "interface/interface.h"
 #include "interface/placement_icon.h"
@@ -71,7 +72,9 @@ void PlacementIconButton::Render( int realX, int realY, bool highlighted, bool c
     float longitude = 0.0f;
     float latitude = 0.0f;
     
-    g_app->GetMapRenderer()->ConvertPixelsToAngle( g_inputManager->m_mouseX, g_inputManager->m_mouseY, &longitude, &latitude );
+    // Phase 3: dispatch through RenderUtil so the placement icon
+    // tracks the cursor correctly in both flat and globe views.
+    RenderUtil::PixelsToAngle( g_inputManager->m_mouseX, g_inputManager->m_mouseY, &longitude, &latitude );
     if( !g_app->GetWorld()->IsValidPlacement( team->m_teamId, Fixed::FromDouble(longitude),
 															  Fixed::FromDouble(latitude), m_unitType ) )
     {
@@ -137,10 +140,9 @@ void PlacementIconButton::MouseUp()
 	float longitude;
 	float latitude;
 
-	g_app->GetMapRenderer()->
-		ConvertPixelsToAngle( g_inputManager->m_mouseX, 
-							  g_inputManager->m_mouseY, 
-							  &longitude, &latitude );
+	RenderUtil::PixelsToAngle( g_inputManager->m_mouseX,
+							   g_inputManager->m_mouseY,
+							   &longitude, &latitude );
 
 	int teamId = g_app->GetWorld()->m_myTeamId;
 

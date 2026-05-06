@@ -291,6 +291,9 @@
     <ClCompile Include="..\..\source\renderer\globe_renderer.cpp">
       <Filter>renderer</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\source\renderer\render_util.cpp">
+      <Filter>renderer</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\source\test\determinism_harness.cpp">
       <Filter>test</Filter>
     </ClCompile>
@@ -769,6 +772,9 @@
       <Filter>renderer</Filter>
     </ClInclude>
     <ClInclude Include="..\..\source\renderer\globe_renderer.h">
+      <Filter>renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\source\renderer\render_util.h">
       <Filter>renderer</Filter>
     </ClInclude>
     <ClInclude Include="..\..\source\test\determinism_harness.h">

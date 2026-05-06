@@ -15,6 +15,7 @@
 #include "network/ClientToServer.h"
 
 #include "renderer/map_renderer.h"
+#include "renderer/render_util.h"
 
 #include "interface/interface.h"
 #include "interface/fleet_placement_icon.h"
@@ -75,7 +76,9 @@ void FleetPlacementIconButton::Render( int realX, int realY, bool highlighted, b
     float longitude = 0.0f;
     float latitude = 0.0f;
     
-    g_app->GetMapRenderer()->ConvertPixelsToAngle( g_inputManager->m_mouseX, g_inputManager->m_mouseY, &longitude, &latitude );
+    // Phase 3: dispatch through RenderUtil so fleet placement tracks
+    // the cursor in both flat and globe views.
+    RenderUtil::PixelsToAngle( g_inputManager->m_mouseX, g_inputManager->m_mouseY, &longitude, &latitude );
     if( !team->m_fleets[m_fleetId]->ValidFleetPlacement( Fixed::FromDouble(longitude), Fixed::FromDouble(latitude) ) )
     {
         colour = Colour(50,50,50,200);
@@ -140,22 +143,22 @@ void FleetPlacementIconButton::MouseUp()
 	float longitude, latitude;
 	Fixed exactLongitude, exactLatitude;
 
-    g_app->GetMapRenderer()->ConvertPixelsToAngle( g_inputManager->m_mouseX, 
-                                                   g_inputManager->m_mouseY, 
-                                                   &longitude, &latitude );
+    RenderUtil::PixelsToAngle( g_inputManager->m_mouseX,
+                               g_inputManager->m_mouseY,
+                               &longitude, &latitude );
 	exactLongitude = Fixed::FromDouble(longitude);
 	exactLatitude = Fixed::FromDouble(latitude);
 
     Team *team = g_app->GetWorld()->GetTeam(g_app->GetWorld()->m_myTeamId);
     team->m_fleets[m_fleetId]->m_teamId = team->m_teamId;
-	
+
     if( team->m_fleets[m_fleetId]->ValidFleetPlacement( exactLongitude, exactLatitude ) )
     {
         for( int i = 0; i < team->m_fleets[m_fleetId]->m_memberType.Size(); ++i )
         {
-            g_app->GetMapRenderer()->ConvertPixelsToAngle( g_inputManager->m_mouseX, 
-                                                           g_inputManager->m_mouseY, 
-                                                           &longitude, &latitude );
+            RenderUtil::PixelsToAngle( g_inputManager->m_mouseX,
+                                       g_inputManager->m_mouseY,
+                                       &longitude, &latitude );
             Fixed thisLong = exactLongitude;
             Fixed thisLat = exactLatitude;
 

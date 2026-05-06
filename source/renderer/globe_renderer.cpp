@@ -38,6 +38,10 @@ GlobeRenderer::GlobeRenderer()
     m_camPitch(20.0f),
     m_camDistance(2.6f),
     m_camRoll(0.0f),
+    m_targetYaw(0.0f),
+    m_targetPitch(20.0f),
+    m_targetDistance(2.6f),
+    m_camSpeed(1),
     m_dragging(false),
     m_dragMouseX(0.0f),
     m_dragMouseY(0.0f),
@@ -297,6 +301,25 @@ void GlobeRenderer::RenderExplosions()
 void GlobeRenderer::Update()
 {
     UpdateCameraControl( g_inputManager->m_mouseX, g_inputManager->m_mouseY );
+
+    // Phase 3: lerp current camera state toward target at 1/m_camSpeed
+    // per tick.  m_camSpeed = 1 collapses to a snap (matches CameraCut).
+    if( m_camSpeed > 0 )
+    {
+        float t = 1.0f / (float) m_camSpeed;
+        if( t > 1.0f ) t = 1.0f;
+
+        // Yaw needs short-arc lerp across the +/-180 wrap.
+        float dyaw = m_targetYaw - m_camYaw;
+        while( dyaw >  180.0f ) dyaw -= 360.0f;
+        while( dyaw < -180.0f ) dyaw += 360.0f;
+        m_camYaw      += dyaw * t;
+        while( m_camYaw >  180.0f ) m_camYaw -= 360.0f;
+        while( m_camYaw < -180.0f ) m_camYaw += 360.0f;
+
+        m_camPitch    += (m_targetPitch    - m_camPitch)    * t;
+        m_camDistance += (m_targetDistance - m_camDistance) * t;
+    }
 }
 
 
@@ -344,25 +367,31 @@ void GlobeRenderer::UpdateCameraControl( float _mouseX, float _mouseY )
     }
     else if( m_dragging )
     {
+        // Drag: snap target to follow the mouse (camSpeed = 1 during
+        // active drag so the camera tracks 1:1 without lag).
         float dx = _mouseX - m_dragMouseX;
         float dy = _mouseY - m_dragMouseY;
-        m_camYaw   -= dx * 0.30f;
-        m_camPitch += dy * 0.30f;
-        if( m_camPitch >  89.0f ) m_camPitch =  89.0f;
-        if( m_camPitch < -89.0f ) m_camPitch = -89.0f;
-        while( m_camYaw >  180.0f ) m_camYaw -= 360.0f;
-        while( m_camYaw < -180.0f ) m_camYaw += 360.0f;
+        m_targetYaw   -= dx * 0.30f;
+        m_targetPitch += dy * 0.30f;
+        if( m_targetPitch >  89.0f ) m_targetPitch =  89.0f;
+        if( m_targetPitch < -89.0f ) m_targetPitch = -89.0f;
+        while( m_targetYaw >  180.0f ) m_targetYaw -= 360.0f;
+        while( m_targetYaw < -180.0f ) m_targetYaw += 360.0f;
+        m_camSpeed = 1;     // snap during drag
         m_dragMouseX = _mouseX;
         m_dragMouseY = _mouseY;
     }
 
-    // Mouse wheel zoom.
+    // Mouse wheel zoom: smooth interpolation per SPEC_AMBIGUOUS-17
+    // (smooth continuous transition).  Wheel writes m_targetDistance;
+    // Update() lerps m_camDistance toward it over a few ticks.
     int wheel = g_inputManager->m_mouseZ;
     if( wheel != 0 )
     {
-        m_camDistance *= (wheel > 0) ? 0.9f : 1.1f;
-        if( m_camDistance < 1.05f ) m_camDistance = 1.05f;
-        if( m_camDistance > 8.0f  ) m_camDistance = 8.0f;
+        m_targetDistance *= (wheel > 0) ? 0.9f : 1.1f;
+        if( m_targetDistance < 1.05f ) m_targetDistance = 1.05f;
+        if( m_targetDistance > 8.0f  ) m_targetDistance = 8.0f;
+        m_camSpeed = 6;     // smooth zoom over ~6 ticks
     }
 }
 
@@ -552,12 +581,27 @@ bool GlobeRenderer::IsOnScreen( float _longitude, float _latitude, float _expand
 }
 
 
-void GlobeRenderer::CenterViewport( float longitude, float latitude, int /*zoom*/, int /*camSpeed*/ )
+void GlobeRenderer::CenterViewport( float longitude, float latitude, int zoom, int camSpeed )
 {
-    m_camYaw   = longitude;
-    m_camPitch = latitude;
-    if( m_camPitch >  89.0f ) m_camPitch =  89.0f;
-    if( m_camPitch < -89.0f ) m_camPitch = -89.0f;
+    // Phase 3 auto-follow: animate over camSpeed ticks per
+    // SPEC_AMBIGUOUS-19 resolution.
+    m_targetYaw   = longitude;
+    m_targetPitch = latitude;
+    if( m_targetPitch >  89.0f ) m_targetPitch =  89.0f;
+    if( m_targetPitch < -89.0f ) m_targetPitch = -89.0f;
+
+    if( zoom > 0 )
+    {
+        // Map MapRenderer's "zoom = 1..30" to a globe distance.  20 is
+        // theatre, 1 is tactical-tight.  Linear is good enough for now.
+        float d = 1.05f + (float) zoom * 0.07f;
+        if( d < 1.05f ) d = 1.05f;
+        if( d > 8.0f  ) d = 8.0f;
+        m_targetDistance = d;
+    }
+
+    if( camSpeed <= 0 ) camSpeed = 1;
+    m_camSpeed = camSpeed;
 }
 
 
@@ -572,10 +616,13 @@ void GlobeRenderer::CenterViewport( int objectId, int zoom, int camSpeed )
 }
 
 
-void GlobeRenderer::CameraCut( float longitude, float latitude, int /*zoom*/ )
+void GlobeRenderer::CameraCut( float longitude, float latitude, int zoom )
 {
-    m_camYaw   = longitude;
-    m_camPitch = latitude;
+    // Cut = snap.  CenterViewport with camSpeed=1 collapses the lerp.
+    CenterViewport( longitude, latitude, zoom, 1 );
+    m_camYaw      = m_targetYaw;
+    m_camPitch    = m_targetPitch;
+    m_camDistance = m_targetDistance;
 }
 
 

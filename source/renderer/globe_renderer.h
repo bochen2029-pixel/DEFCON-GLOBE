@@ -34,6 +34,15 @@ protected:
     float   m_camDistance;      // distance from earth centre, in unit-radius space
     float   m_camRoll;          // reserved for cinematics, default 0
 
+    // Phase 3: animated camera target.  CenterViewport / CameraCut /
+    // wheel zoom write the targets; Update() lerps the current state
+    // toward them by 1/m_camSpeed each tick (SPEC_AMBIGUOUS-17 smooth
+    // continuous transition + SPEC_AMBIGUOUS-19 auto-follow port).
+    float   m_targetYaw;
+    float   m_targetPitch;
+    float   m_targetDistance;
+    int     m_camSpeed;          // higher = slower; 1 = snap; default 200
+
     Vector3<float> m_camPos;    // last computed camera position (eye)
     Vector3<float> m_camFront;  // last computed forward
     Vector3<float> m_camUp;     // last computed up
