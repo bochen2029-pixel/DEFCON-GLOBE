@@ -1,0 +1,21 @@
+# Determinism scenario: radar-saturated mid-game
+#
+# Maximum radar coverage with mixed-altitude airborne units.  Tests:
+#   - Phase 1: spherical RadarGrid coverage
+#   - Phase 2: altitude-dependent radar horizon, low-altitude bomber
+#              evasion
+#
+# Initial conditions:
+#   - Two AI teams
+#   - 8 radar stations each (max), 4 fighters and 4 bombers each
+#   - Bombers split between cruise altitude and low altitude
+#   - DEFCON 3; no nukes launched
+#   - 10000 ticks
+
+scenario  radar
+seed      0xRADA
+ticks     10000
+defcon    3
+teams     2
+units     radarstation:8,fighter:4,bomber:4 per_team
+bomber    half_low_altitude

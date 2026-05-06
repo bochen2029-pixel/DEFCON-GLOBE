@@ -32,6 +32,8 @@
 
 #include "app/globals.h"
 #include "app/app.h"
+
+#include "test/determinism_harness.h"
 #include "app/game.h"
 #include "app/modsystem.h"
 #include "app/version_manager.h"
@@ -743,6 +745,23 @@ void DefconMain()
     g_app->MinimalInit();
 
 	g_app->FinishInit();
+
+    //
+    // Determinism harness: if DEFCON_DETERMINISM_TRACE is set, open the
+    // file and route every World tick hash through it.  Used by the
+    // CI matrix in .github/workflows/determinism.yml.
+    //
+    {
+        const char *tracePath = getenv( "DEFCON_DETERMINISM_TRACE" );
+        if( tracePath && *tracePath )
+        {
+            FILE *fp = fopen( tracePath, "w" );
+            if( fp )
+            {
+                DeterminismHarness::InstallTraceFile( fp );
+            }
+        }
+    }
 
     double nextServerAdvanceTime = GetHighResTime();
     double serverAdvanceStartTime = -1;

@@ -1,0 +1,60 @@
+name: determinism
+
+# Cross-OS determinism gate (docs/DESIGN_v1.md invariant I-4).  At every
+# phase gate, the per-tick state-hash trace produced by the headless
+# DEFCON binary must be byte-identical across Win/macOS/Linux for each
+# of the three pinned scenarios.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  determinism:
+    name: ${{ matrix.os }} / ${{ matrix.scenario }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:       [windows-latest, macos-latest, ubuntu-latest]
+        scenario: [surface, mirv, radar]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          rem TODO Phase 0.5: invoke msbuild against targets\msvc\DefconX.sln
+          rem and copy Defcon.exe into the workspace root.  Tracked under
+          rem the headless-mode follow-up; until then this step is a no-op
+          rem so the matrix exercises trace-diffing once binaries exist.
+          echo skipping build until headless mode lands
+
+      - name: Build (POSIX)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          # TODO Phase 0.5: macOS/Linux build via the platform-parity
+          # work tracked in docs/DESIGN_v1.md section 31.  Until then
+          # this step is a no-op.
+          echo "skipping build until headless mode lands on ${{ runner.os }}"
+
+      - name: Run determinism trace
+        if: false  # disabled until headless mode lands
+        shell: bash
+        run: |
+          chmod +x targets/test/run_determinism.sh
+          targets/test/run_determinism.sh ${{ matrix.scenario }} 10000 trace.out
+
+      - name: Compare against golden trace
+        if: false  # disabled until headless mode lands
+        shell: bash
+        run: |
+          golden=targets/test/golden/phase0.trace
+          if [ ! -s "$golden" ]; then
+            echo "golden trace empty; nothing to compare yet" >&2
+            exit 0
+          fi
+          diff -q trace.out "$golden"

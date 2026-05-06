@@ -73,6 +73,9 @@
     <Filter Include="interface\soundsystem">
       <UniqueIdentifier>{a93df799-f100-43a5-9132-01ec31d51c60}</UniqueIdentifier>
     </Filter>
+    <Filter Include="test">
+      <UniqueIdentifier>{c0de7e57-3d10-4b1c-8d4a-7e1a3d1c1e10}</UniqueIdentifier>
+    </Filter>
     <Filter Include="interface\options">
       <UniqueIdentifier>{21f049d4-49e7-4200-93b1-60664357232f}</UniqueIdentifier>
     </Filter>
@@ -287,6 +290,9 @@
     </ClCompile>
     <ClCompile Include="..\..\source\renderer\globe_renderer.cpp">
       <Filter>renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\source\test\determinism_harness.cpp">
+      <Filter>test</Filter>
     </ClCompile>
     <ClCompile Include="..\..\source\network\ClientToServer.cpp">
       <Filter>network</Filter>
@@ -761,6 +767,9 @@
     </ClInclude>
     <ClInclude Include="..\..\source\renderer\globe_renderer.h">
       <Filter>renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\source\test\determinism_harness.h">
+      <Filter>test</Filter>
     </ClInclude>
     <ClInclude Include="..\..\source\network\ClientToServer.h">
       <Filter>network</Filter>

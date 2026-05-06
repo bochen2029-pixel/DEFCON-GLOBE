@@ -31,6 +31,8 @@
 
 #include "world/world.h"
 #include "world/explosion.h"
+
+#include "test/determinism_harness.h"
 #include "world/silo.h"
 #include "world/team.h"
 #include "world/nuke.h"
@@ -2143,6 +2145,13 @@ void World::Update()
     g_app->GetGame()->Update();
     END_PROFILE( "Game" );
 
+
+    //
+    // Determinism trace hook: no-op unless a trace file has been
+    // installed via DeterminismHarness::InstallTraceFile.  See
+    // source/test/determinism_harness.h.
+    //
+    DeterminismHarness::OnTick( this, -1 );
 
 
     END_PROFILE( "World Update" );

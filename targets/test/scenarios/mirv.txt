@@ -1,0 +1,21 @@
+# Determinism scenario: MIRV nuclear exchange
+#
+# Two-team symmetric exchange with MIRV-capable silos.  Tests:
+#   - Phase 1: great-circle ground tracks
+#   - Phase 2: ballistic apogee curve, MIRV split at apogee, ABM 3D
+#              interception
+#
+# Initial conditions:
+#   - Two AI teams in opposite hemispheres
+#   - 4 silos each, 2 radar stations each, 2 airbases each
+#   - DEFCON 1 forced at tick 100
+#   - First volley at tick 150, MIRVs enabled
+#   - 10000 ticks
+
+scenario  mirv
+seed      0xB055
+ticks     10000
+defcon    1 at_tick=100
+teams     2
+units     silo:4,radarstation:2,airbase:2 per_team
+mirv      enabled

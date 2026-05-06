@@ -1,0 +1,25 @@
+# Determinism scenario: pure surface fleet movement
+#
+# Phase 0 placeholder.  The harness CLI installer (DefconMain in
+# defcon.cpp) currently relies on the live game state - a scripted
+# scenario loader is Phase 0.5 work.  Until then, this file documents
+# the intended initial conditions; the equivalent in-engine setup is
+# placed by hand or via the existing tutorial system.
+#
+# Initial conditions:
+#   - Two AI teams on opposite hemispheres
+#   - 6 carriers, 4 battleships, 4 subs each
+#   - DEFCON 5; no nukes launched
+#   - 10000 ticks
+#
+# Expected: zero combat, only sailable-water pathing exercised.  Tests
+# great-circle movement (Phase 1) and seam-deletion (Phase 1) without
+# noise from radar/nuke physics.
+
+scenario  surface
+seed      0x5EA1
+ticks     10000
+defcon    5
+teams     2
+units     carrier:6,battleship:4,sub:4 per_team
+allow     no_nukes
