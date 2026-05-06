@@ -9,11 +9,14 @@ class Nuke : public MovingObject
 {
 protected:
     Fixed   m_totalDistance;
-    Fixed   m_curveDirection;
+    Fixed   m_curveDirection;           // Phase 2: unused - retained for save-format compatibility
     Fixed   m_prevDistanceToTarget;
-    
+
     Fixed   m_newLongitude;             // Used to slowly turn towards new target
     Fixed   m_newLatitude;
+
+    Fixed   m_apogee;                   // Phase 2: peak altitude (metres) per SPEC_AMBIGUOUS-12 table
+
 	bool	m_isMirv;
     bool    m_targetLocked;
 	void Nuke::InsertIntoCityListOrderd(LList<City *> *llist, City *city);

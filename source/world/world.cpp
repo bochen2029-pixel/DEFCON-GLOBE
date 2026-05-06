@@ -504,7 +504,13 @@ void World::AssignCities()
                 }
 
                 populations[i] += city->m_population;
-                m_radarGrid.AddCoverage( city->m_longitude, city->m_latitude, city->GetRadarRange(), city->m_teamId );
+                // Phase 2: clamp the city's radar coverage radius to its
+                // horizon-arc.  City altitude is 0 (ground) so the horizon
+                // is computed against a default ground-target altitude.
+                Fixed cityRadius = city->GetRadarRange();
+                Fixed cityHorizon = SphereHorizonArcDeg( city->m_altitude, Fixed(0) );
+                if( cityRadius > cityHorizon ) cityRadius = cityHorizon;
+                m_radarGrid.AddCoverage( city->m_longitude, city->m_latitude, cityRadius, city->m_teamId );
             }
         }
     }
@@ -1937,7 +1943,14 @@ void World::Update()
                 else
                 {
                     Fixed newRadarRange = wobj->GetRadarRange();
-                    m_radarGrid.UpdateCoverage( oldLongitude, oldLatitude, oldRadarSize, 
+                    // Phase 2 horizon clamp.  Observer altitude is the
+                    // unit's m_altitude; target altitude defaults to 0
+                    // (ground).  Bomber-at-altitude visibility is
+                    // tested separately in the per-target IsVisible
+                    // path (Phase 2 polish).
+                    Fixed horizonArc = SphereHorizonArcDeg( wobj->m_altitude, Fixed(0) );
+                    if( newRadarRange > horizonArc ) newRadarRange = horizonArc;
+                    m_radarGrid.UpdateCoverage( oldLongitude, oldLatitude, oldRadarSize,
                         wobj->m_longitude, wobj->m_latitude, newRadarRange, wobj->m_teamId );
                     wobj->m_previousRadarRange = newRadarRange;
                 }

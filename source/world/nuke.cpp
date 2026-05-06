@@ -30,6 +30,7 @@ Nuke::Nuke()
     m_prevDistanceToTarget( Fixed::MAX ),
     m_newLongitude(0),
     m_newLatitude(0),
+    m_apogee(0),
 	m_isMirv(false),
     m_targetLocked(false)
 {
@@ -77,6 +78,20 @@ void Nuke::SetWaypoint( Fixed longitude, Fixed latitude )
     // alongside the save-format bump.
     m_totalDistance = SphereGreatCircleDistanceDeg( m_longitude, m_latitude,
                                                     m_targetLongitude, m_targetLatitude );
+
+    // Phase 2 apogee (SPEC_AMBIGUOUS-12 table, ranges converted from km
+    // to degrees of arc via 1 deg ~= 111.195 km).  Piecewise-linear,
+    // monotonic, saturated at 1200 km.
+    {
+        Fixed d = m_totalDistance;        // degrees of arc
+        Fixed apog;                       // metres
+        if( d <= Fixed(0) )                          apog = Fixed(0);
+        else if( d <= Fixed(9) )                     apog = Fixed(300000)  *  d         / Fixed(9);
+        else if( d <= Fixed(45) )                    apog = Fixed(300000) + (Fixed(500000) * (d - Fixed(9))  / Fixed(36));
+        else if( d <= Fixed(90) )                    apog = Fixed(800000) + (Fixed(400000) * (d - Fixed(45)) / Fixed(45));
+        else                                         apog = Fixed(1200000);
+        m_apogee = apog;
+    }
 
     if( m_targetLongitude >= m_longitude )
     {
@@ -146,6 +161,16 @@ bool Nuke::Update()
                            ? ( 1 - remainingDistance / m_totalDistance )
                            : Fixed(0);
 
+    // Phase 2 altitude: h(s) = h_max * sin(pi * s / S).  Apogee at the
+    // arc midpoint (SPEC_AMBIGUOUS-11 option A).  In Fixed: argument
+    // is fractionDistance * pi.
+    {
+        Fixed pi = Fixed::PI;
+        Fixed sArg = fractionDistance * pi;
+        m_altitude = m_apogee * sin( sArg );
+        if( m_altitude < Fixed(0) ) m_altitude = Fixed(0);
+    }
+
     Fixed bearing = SphereGreatCircleBearingDeg( m_longitude, m_latitude,
                                                  m_targetLongitude, m_targetLatitude );
 
@@ -200,7 +225,9 @@ bool Nuke::Update()
 	}
 
 	//if (m_isMirv && fractionDistance.DoubleValue() > 0.5) {
-	if (m_isMirv && ( (fractionDistance.DoubleValue() > 0.6) || (m_currentState == 2) )   ) {
+	// Phase 2: MIRV split fires at apogee (s = S/2 -> fractionDistance >= 0.5)
+	// per SPEC_AMBIGUOUS-13 resolution.
+	if (m_isMirv && ( (fractionDistance >= Fixed::Hundredths(50)) || (m_currentState == 2) )   ) {
 		m_currentState == 0;
 		SetMirv(false);
 
