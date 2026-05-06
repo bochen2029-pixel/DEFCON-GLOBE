@@ -35,6 +35,7 @@ extern float    g_advanceTime;                                  // How long the 
 extern double   g_lastServerAdvance;                            // Time of last server advance
 extern float    g_predictionTime;                               // Time between last server advance and start of render
 extern int      g_lastProcessedSequenceId;
+extern bool     g_useGlobeRenderer;                              // Phase 0: toggle between flat MapRenderer and 3D GlobeRenderer
 
 
 #endif

@@ -63,6 +63,7 @@ float    g_advanceTime = 0.0f;
 double   g_lastServerAdvance = 0.0f;
 float    g_predictionTime = 0.0f;
 int      g_lastProcessedSequenceId = -2;                         // -2=not yet ready to begin. -1=ready for first update (id=0)
+bool     g_useGlobeRenderer = false;                              // Phase 0 default: flat MapRenderer
 
 
 void UpdateAdvanceTime()

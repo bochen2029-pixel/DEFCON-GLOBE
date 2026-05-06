@@ -12,6 +12,7 @@
 #define _included_app_h
 
 class MapRenderer;
+class GlobeRenderer;
 class LobbyRenderer;
 class Interface;
 class Server;
@@ -45,6 +46,7 @@ public:                 // STARTUP OPTIONS
     
 protected:
     MapRenderer         *m_mapRenderer;
+    GlobeRenderer       *m_globeRenderer;
     LobbyRenderer       *m_lobbyRenderer;
     Interface           *m_interface;
     Game                *m_game;
@@ -87,6 +89,7 @@ public:
     void    RenderTitleScreen();
 
     MapRenderer     *GetMapRenderer();
+    GlobeRenderer   *GetGlobeRenderer();
     LobbyRenderer   *GetLobbyRenderer();
     Interface       *GetInterface();
     Server          *GetServer();

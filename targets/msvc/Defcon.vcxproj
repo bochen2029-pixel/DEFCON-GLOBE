@@ -1103,6 +1103,7 @@
       <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
+    <ClCompile Include="..\..\source\renderer\globe_renderer.cpp" />
     <ClCompile Include="..\..\source\renderer\map_renderer.cpp">
       <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug Steam|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug Steam|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -1978,6 +1979,7 @@
     <ClInclude Include="..\..\contrib\SystemIV\lib\sound\soundsystem_interface.h" />
     <ClInclude Include="..\..\source\renderer\animated_icon.h" />
     <ClInclude Include="..\..\source\renderer\lobby_renderer.h" />
+    <ClInclude Include="..\..\source\renderer\globe_renderer.h" />
     <ClInclude Include="..\..\source\renderer\map_renderer.h" />
     <ClInclude Include="..\..\source\network\ClientToServer.h" />
     <ClInclude Include="..\..\source\network\network_defines.h" />

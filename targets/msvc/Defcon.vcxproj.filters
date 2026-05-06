@@ -285,6 +285,9 @@
     <ClCompile Include="..\..\source\renderer\map_renderer.cpp">
       <Filter>renderer</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\source\renderer\globe_renderer.cpp">
+      <Filter>renderer</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\source\network\ClientToServer.cpp">
       <Filter>network</Filter>
     </ClCompile>
@@ -754,6 +757,9 @@
       <Filter>renderer</Filter>
     </ClInclude>
     <ClInclude Include="..\..\source\renderer\map_renderer.h">
+      <Filter>renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\source\renderer\globe_renderer.h">
       <Filter>renderer</Filter>
     </ClInclude>
     <ClInclude Include="..\..\source\network\ClientToServer.h">

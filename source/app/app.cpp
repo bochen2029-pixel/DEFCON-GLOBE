@@ -48,6 +48,7 @@
 #include "interface/demo_window.h"
 
 #include "renderer/map_renderer.h"
+#include "renderer/globe_renderer.h"
 #include "renderer/lobby_renderer.h"
 
 #include "network/ClientToServer.h"
@@ -89,6 +90,7 @@ App::App()
     m_gameStartTimer(-1.0),
     m_tutorial(NULL),
     m_mapRenderer(NULL),
+    m_globeRenderer(NULL),
     m_lobbyRenderer(NULL),
     m_earthData(NULL),
 	m_mousePointerVisible(false),
@@ -104,6 +106,7 @@ App::~App()
 	delete m_earthData;
 	delete m_interface;
 	delete m_lobbyRenderer;
+	delete m_globeRenderer;
 	delete m_mapRenderer;
 	delete m_server;
 	delete m_tutorial;
@@ -254,6 +257,9 @@ void App::MinimalInit()
 
     m_mapRenderer = new MapRenderer();
     m_mapRenderer->Init();
+
+    m_globeRenderer = new GlobeRenderer();
+    m_globeRenderer->Init();
 
     m_lobbyRenderer = new LobbyRenderer();
     m_lobbyRenderer->Initialise();
@@ -522,6 +528,13 @@ void App::Update()
     {
         m_statusIcon->Update();
     }
+
+    // Phase 0 toggle: F3 swaps between flat MapRenderer and 3D GlobeRenderer.
+    if( g_keyDeltas[KEY_F3] )
+    {
+        g_useGlobeRenderer = !g_useGlobeRenderer;
+        g_keyDeltas[KEY_F3] = 0;
+    }
 }
 
 
@@ -546,8 +559,16 @@ void App::Render()
 #endif
         if( render )
         {
-            GetMapRenderer()->Update();
-            GetMapRenderer()->Render();
+            if( g_useGlobeRenderer )
+            {
+                GetGlobeRenderer()->Update();
+                GetGlobeRenderer()->Render();
+            }
+            else
+            {
+                GetMapRenderer()->Update();
+                GetMapRenderer()->Render();
+            }
         }
     }
 
@@ -979,6 +1000,13 @@ MapRenderer *App::GetMapRenderer()
 {
     AppAssert( m_mapRenderer );
     return m_mapRenderer;
+}
+
+
+GlobeRenderer *App::GetGlobeRenderer()
+{
+    AppAssert( m_globeRenderer );
+    return m_globeRenderer;
 }
 
 
