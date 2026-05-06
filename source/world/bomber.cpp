@@ -37,6 +37,11 @@ Bomber::Bomber()
     m_turnRate = Fixed::Hundredths(1);
     m_selectable = true;
     m_maxHistorySize = 10;
+
+    // Phase 2 altitude band (SPEC_AMBIGUOUS-07 resolution: bomber alt
+    // is constant per state - cruise = mid-band).  Low-altitude state
+    // is a Phase 2.5 polish item.
+    m_altitude = 10000;
     m_range = 150;
 
     m_nukeSupply = 1;

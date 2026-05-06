@@ -45,6 +45,7 @@ WorldObject::WorldObject()
     m_objectId(-1),
     m_longitude(0),
     m_latitude(0),
+    m_altitude(0),
     m_type(TypeInvalid),
     m_radarRange(0),
     m_life(1),

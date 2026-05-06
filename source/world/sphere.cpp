@@ -217,6 +217,63 @@ void SphereGreatCircleInterpolate( const Fixed &lonA, const Fixed &latA,
 // Ray vs unit sphere.
 //
 
+//
+// Phase 2: altitude-aware ECEF.  Surface position scaled by
+// (R + alt); negative alt is sub-surface (submerged sub).
+//
+
+void SphereLonLatAltToECEF( const Fixed &lon, const Fixed &lat, const Fixed &alt,
+                            Vector3<Fixed> &out )
+{
+    Vector3<Fixed> unit;
+    SphereLonLatToUnit( lon, lat, unit );
+    Fixed r = SPHERE_EARTH_RADIUS_METRES + alt;
+    out.x = unit.x * r;
+    out.y = unit.y * r;
+    out.z = unit.z * r;
+}
+
+
+void SphereECEFToLonLatAlt( const Vector3<Fixed> &v,
+                            Fixed &lon, Fixed &lat, Fixed &alt )
+{
+    Fixed mag = sqrt( v.x * v.x + v.y * v.y + v.z * v.z );
+    if( mag == kZero )
+    {
+        lon = kZero; lat = kZero; alt = -SPHERE_EARTH_RADIUS_METRES;
+        return;
+    }
+    Vector3<Fixed> unit( v.x / mag, v.y / mag, v.z / mag );
+    SphereUnitToLonLat( unit, lon, lat );
+    alt = mag - SPHERE_EARTH_RADIUS_METRES;
+}
+
+
+//
+// Radar horizon arc.  Returns degrees of arc per the SPEC_AMBIGUOUS-09
+// unit choice; callers in source/world/radargrid.cpp can use it
+// directly against degree-of-arc range constants.
+//
+
+Fixed SphereHorizonArcDeg( const Fixed &h_observer_m,
+                           const Fixed &h_target_m )
+{
+    Fixed hR = h_observer_m;
+    Fixed hT = h_target_m;
+    if( hR < kZero ) hR = kZero;
+    if( hT < kZero ) hT = kZero;
+
+    // Observer-to-horizon arc length, metres.
+    Fixed dR = sqrt( kTwo * SPHERE_EARTH_RADIUS_METRES * hR );
+    Fixed dT = sqrt( kTwo * SPHERE_EARTH_RADIUS_METRES * hT );
+    Fixed arcM = dR + dT;
+
+    // Convert arc-length (m) to degrees: arcM / R = radians;
+    // radians * 180/pi = degrees.
+    return ( arcM / SPHERE_EARTH_RADIUS_METRES ) * k180OverPi;
+}
+
+
 bool SphereRaySphereIntersectUnit( const Vector3<Fixed> &origin,
                                    const Vector3<Fixed> &dir,
                                    Fixed &outT )

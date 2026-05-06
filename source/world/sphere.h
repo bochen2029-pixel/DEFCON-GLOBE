@@ -54,6 +54,33 @@ void SphereUnitToLonLat ( const Vector3<Fixed> &v,
 
 
 //
+// Phase 2: altitude-aware ECEF.  alt is metres above sea level;
+// negative for submerged subs.  Returns ECEF in metres.
+//
+void SphereLonLatAltToECEF ( const Fixed &lon, const Fixed &lat, const Fixed &alt,
+                             Vector3<Fixed> &out );
+
+void SphereECEFToLonLatAlt ( const Vector3<Fixed> &v,
+                             Fixed &lon, Fixed &lat, Fixed &alt );
+
+
+//
+// Phase 2: radar horizon arc, in *degrees of arc*, for an observer at
+// height h_r metres looking at a target at height h_t metres.  Uses
+// the standard geometric horizon formula:
+//
+//   d_r = sqrt( 2 * R * h_r )           (observer to horizon, arc-length)
+//   d_t = sqrt( 2 * R * h_t )           (target   to horizon, arc-length)
+//   horizon = (d_r + d_t) / R           (radians)  -> degrees of arc
+//
+// Atmospheric refraction is omitted in Phase 2 (SPEC_AMBIGUOUS-16
+// resolution).  Negative heights (submerged sub) return 0.
+//
+Fixed SphereHorizonArcDeg ( const Fixed &h_observer_m,
+                            const Fixed &h_target_m );
+
+
+//
 // Pole-cap snap (SPEC_AMBIGUOUS-10).  Mutates lat in-place.  Lon
 // untouched (the cap is a parallel of latitude).
 //

@@ -35,6 +35,10 @@ Fighter::Fighter()
 
     m_movementType = MovementTypeAir;
 
+    // Phase 2 altitude band (per docs/DESIGN_v1.md section 9 table):
+    // fighters cruise within [5 km, 15 km].  Mid-band default.
+    m_altitude = 10000;
+
     AddState( LANGUAGEPHRASE("state_attack"), 40, 15, 6, 12, true ); //phuck
 
     InitialiseTimers();

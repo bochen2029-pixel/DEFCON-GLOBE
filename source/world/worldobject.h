@@ -51,6 +51,7 @@ public:
     int     m_objectId;
     Fixed   m_longitude;
     Fixed   m_latitude;
+    Fixed   m_altitude;                                 // Phase 2: metres above sea level (negative = submerged sub).  SPEC_AMBIGUOUS-01 resolution.
     int     m_life;                                     // Cities population, or 1/0 for sea units, or 0-30 for ground units
 	int		m_lastHitByTeamId;
     bool    m_selectable;
