@@ -98,6 +98,12 @@ Fixed sin(const Fixed& _x);
 Fixed cos(const Fixed& _x);
 Fixed tan(const Fixed& _x);
 Fixed atan2(const Fixed& _y, const Fixed& _x);
+// Phase 1 fix: asin/acos were defined in fixed_64.cpp but never
+// declared in fixed_64.h, so external translation units could not see
+// them and silently fell through to math.h's double acos/asin via
+// implicit conversion (only "worked" under FLOAT_NUMERICS).
+Fixed asin(const Fixed& _x);
+Fixed acos(const Fixed& _x);
 
 // For debugging
 std::ostream& operator << (std::ostream& _os, const Fixed& _f);

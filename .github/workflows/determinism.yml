@@ -1,9 +1,18 @@
 name: determinism
 
 # Cross-OS determinism gate (docs/DESIGN_v1.md invariant I-4).  At every
-# phase gate, the per-tick state-hash trace produced by the headless
-# DEFCON binary must be byte-identical across Win/macOS/Linux for each
-# of the three pinned scenarios.
+# phase gate the per-tick state-hash trace produced by the standalone
+# determinism_test binary must be byte-identical across
+# {Win MSVC, macOS Clang, Linux GCC} for each of the three pinned
+# scenarios.
+#
+# The driver under source/test/determinism_main.cpp exercises the
+# invariant-critical primitives (Fixed math, sphere math, Nuke apogee
+# profile, RadarGrid spherical coverage) directly without launching
+# DEFCON.  This is sufficient for I-4 because those are the only
+# pieces of the simulation that need bit-identity across compilers;
+# the rest of World::Update is graphics/audio/network-coupled and
+# wraps these primitives.
 
 on:
   push:
@@ -22,39 +31,34 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build (Windows)
-        if: runner.os == 'Windows'
-        shell: cmd
-        run: |
-          rem TODO Phase 0.5: invoke msbuild against targets\msvc\DefconX.sln
-          rem and copy Defcon.exe into the workspace root.  Tracked under
-          rem the headless-mode follow-up; until then this step is a no-op
-          rem so the matrix exercises trace-diffing once binaries exist.
-          echo skipping build until headless mode lands
-
       - name: Build (POSIX)
         if: runner.os != 'Windows'
         shell: bash
+        working-directory: targets/test/determinism_make
+        run: make
+
+      - name: Build (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        working-directory: targets/test/determinism_make
+        # MinGW-w64 ships with windows-latest; -D__LITTLE_ENDIAN__ is
+        # set in the Makefile so the same recipe works.
         run: |
-          # TODO Phase 0.5: macOS/Linux build via the platform-parity
-          # work tracked in docs/DESIGN_v1.md section 31.  Until then
-          # this step is a no-op.
-          echo "skipping build until headless mode lands on ${{ runner.os }}"
+          mingw32-make CXX=g++ || make CXX=g++
 
       - name: Run determinism trace
-        if: false  # disabled until headless mode lands
         shell: bash
+        working-directory: targets/test/determinism_make
         run: |
-          chmod +x targets/test/run_determinism.sh
-          targets/test/run_determinism.sh ${{ matrix.scenario }} 10000 trace.out
+          ./determinism_test ${{ matrix.scenario }} 10000 trace.out
 
       - name: Compare against golden trace
-        if: false  # disabled until headless mode lands
         shell: bash
+        working-directory: targets/test/determinism_make
         run: |
-          golden=targets/test/golden/phase0.trace
+          golden=../golden/${{ matrix.scenario }}.trace
           if [ ! -s "$golden" ]; then
-            echo "golden trace empty; nothing to compare yet" >&2
-            exit 0
+            echo "golden trace missing at $golden" >&2
+            exit 1
           fi
           diff -q trace.out "$golden"

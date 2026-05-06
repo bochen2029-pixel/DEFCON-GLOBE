@@ -26,8 +26,6 @@
 
 class World;
 class WorldObject;
-struct stdio_FILE;
-typedef struct stdio_FILE FILE;
 
 #include <stdio.h>
 

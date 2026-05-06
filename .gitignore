@@ -45,6 +45,12 @@ blackbox.txt
 preferences.txt
 
 # ============================================================================
+# Determinism harness build outputs (Phase 0.5)
+# ============================================================================
+targets/test/determinism_make/determinism_test
+targets/test/determinism_make/*.o
+
+# ============================================================================
 # Large binary assets (restore from backup locally when needed)
 # ============================================================================
 sounds.dat
