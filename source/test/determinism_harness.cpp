@@ -74,15 +74,15 @@ static unsigned long long HashObject( unsigned long long h, WorldObject *obj )
     h = HashInt( h, obj->m_type );
     h = HashFixed( h, obj->m_longitude );
     h = HashFixed( h, obj->m_latitude );
+    // Phase 2: m_altitude folded into the trace.  Diverges from the
+    // Phase 0 / Phase 1 golden traces - intentional versioned break.
+    h = HashFixed( h, obj->m_altitude );
     h = HashFixed( h, obj->m_vel.x );
     h = HashFixed( h, obj->m_vel.y );
     h = HashFixed( h, obj->m_vel.z );
     h = HashInt( h, obj->m_life );
     h = HashInt( h, obj->m_currentState );
     h = HashFixed( h, obj->m_stateTimer );
-    // Phase 2 will fold m_altitude here; the trace will diverge from
-    // the Phase 0 / Phase 1 golden traces, which is the intended
-    // versioned break.
     return h;
 }
 
