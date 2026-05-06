@@ -401,13 +401,13 @@ Fixed sin( const Fixed &_x )
 	
 	// std::cout << " (index = " << index << ")";
 		
-	if (index < 1024)		
+	if (index < 1024)
 		return fixed64::sinTable[index];
-	else if (1024 <= index < 2048)
+	else if (index < 2048)
 		return fixed64::sinTable[1024 - (index - 1024)];
-	else if (2048 <= index < 3072)
+	else if (index < 3072)
 		return -fixed64::sinTable[index - 2048];
-	else if (3072 <= index)
+	else
 		return -fixed64::sinTable[1024 - (index - 3072)];
 }
 
