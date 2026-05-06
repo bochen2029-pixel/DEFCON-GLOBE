@@ -17,6 +17,9 @@
 #include "world/earthdata.h"
 #include "world/worldobject.h"
 #include "world/team.h"
+#include "world/date.h"
+#include "world/whiteboard.h"
+#include "world/sphere.h"
 
 #include "renderer/map_renderer.h"
 #include "renderer/globe_renderer.h"
@@ -286,6 +289,76 @@ void GlobeRenderer::RenderTrails()
 }
 
 
+void GlobeRenderer::RenderDayNightTerminator()
+{
+    // Phase 4 day/night terminator.  Darken the half of the sphere
+    // facing away from the sun.  Sun direction:
+    //   - longitude advances as the world clock does (Earth rotates
+    //     360 deg per 86400 game-seconds).
+    //   - latitude held at 0 (equinox model; solar declination is a
+    //     polish item if needed).
+    // Implementation: render the same UV sphere as RenderSphereFill,
+    // per-vertex colour = night-tint * smoothstep(-0.2, 0.2, dot(v, sun)).
+    World *world = g_app->GetWorld();
+    if( !world ) return;
+
+    double seconds = world->m_theDate.m_theDate.DoubleValue();
+    double sunLon = (seconds / 86400.0) * 360.0;
+    while( sunLon >  180.0 ) sunLon -= 360.0;
+    while( sunLon < -180.0 ) sunLon += 360.0;
+
+    Vector3<float> sun;
+    LonLatToUnitVector( (float) sunLon, 0.0f, sun );
+
+    const int latSteps = 32;
+    const int lonSteps = 64;
+
+    glEnable( GL_BLEND );
+    glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+    glDisable( GL_CULL_FACE );
+
+    for( int i = 0; i < latSteps; ++i )
+    {
+        float lat0 = -90.0f + 180.0f *  i      / latSteps;
+        float lat1 = -90.0f + 180.0f * (i + 1) / latSteps;
+
+        glBegin( GL_TRIANGLE_STRIP );
+        for( int j = 0; j <= lonSteps; ++j )
+        {
+            float lon = -180.0f + 360.0f * j / lonSteps;
+            Vector3<float> a, b;
+            LonLatToUnitVector( lon, lat1, a );
+            LonLatToUnitVector( lon, lat0, b );
+
+            // dot in [-1, 1]; remap to [0,1] night intensity via
+            // a soft terminator band of ~12 deg.
+            float da = a * sun;
+            float db = b * sun;
+            float ka = 0.5f - 0.5f * da;
+            float kb = 0.5f - 0.5f * db;
+            // Clamp + smoothstep-ish for a softer terminator edge.
+            if( ka < 0 ) ka = 0; if( ka > 1 ) ka = 1;
+            if( kb < 0 ) kb = 0; if( kb > 1 ) kb = 1;
+            ka = ka * ka * (3.0f - 2.0f * ka);
+            kb = kb * kb * (3.0f - 2.0f * kb);
+            // Night alpha caps at 0.55 so coastlines remain readable.
+            float alphaA = ka * 0.55f;
+            float alphaB = kb * 0.55f;
+
+            // Slightly above the surface fill to avoid z-fighting.
+            Vector3<float> aa = a * 1.0009f;
+            Vector3<float> bb = b * 1.0009f;
+
+            glColor4f( 0.0f, 0.0f, 0.05f, alphaA );
+            glVertex3fv( aa.GetData() );
+            glColor4f( 0.0f, 0.0f, 0.05f, alphaB );
+            glVertex3fv( bb.GetData() );
+        }
+        glEnd();
+    }
+}
+
+
 void GlobeRenderer::RenderRadarOverlay()
 {
     // Phase 0 stub.
@@ -295,6 +368,100 @@ void GlobeRenderer::RenderRadarOverlay()
 void GlobeRenderer::RenderExplosions()
 {
     // Phase 0 stub - billboards aligned to surface normal land in Phase 4.
+}
+
+
+void GlobeRenderer::RenderWhiteBoard()
+{
+    // Phase 4 whiteboard on the sphere (SPEC_AMBIGUOUS-27 option A).
+    // The data model in source/world/whiteboard.h is unchanged - lon/lat
+    // points with m_startPoint demarcating strokes.  Each stroke is
+    // drawn as a great-circle polyline; segments are subdivided so the
+    // arc visibly hugs the surface rather than chord-cutting through.
+    World *world = g_app->GetWorld();
+    if( !world ) return;
+
+    Team *myTeam = world->GetMyTeam();
+    if( !myTeam ) return;
+
+    glLineWidth( 2.0f );
+    glDisable( GL_DEPTH_TEST );
+    glEnable( GL_BLEND );
+    glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+
+    int sizeteams = world->m_teams.Size();
+    for( int t = 0; t < sizeteams; ++t )
+    {
+        Team *team = world->m_teams[ t ];
+        bool show = ( team->m_teamId == myTeam->m_teamId )
+                 || ( world->IsFriend( myTeam->m_teamId, team->m_teamId ) );
+        if( !show ) continue;
+
+        WhiteBoard *wb = &world->m_whiteBoards[ team->m_teamId ];
+        const LList<WhiteBoardPoint *> *points = wb->GetListPoints();
+        if( !points ) continue;
+        int n = points->Size();
+        if( n == 0 ) continue;
+
+        Colour colour = team->GetTeamColour();
+        glColor4ub( colour.m_r, colour.m_g, colour.m_b, colour.m_a );
+
+        bool inStroke = false;
+        WhiteBoardPoint *prev = NULL;
+
+        for( int i = 0; i < n; ++i )
+        {
+            WhiteBoardPoint *pt = points->GetData( i );
+
+            if( i == 0 || pt->m_startPoint )
+            {
+                if( inStroke ) { glEnd(); inStroke = false; }
+                glBegin( GL_LINE_STRIP );
+                inStroke = true;
+                Vector3<float> p;
+                LonLatToUnitVector( pt->m_longitude, pt->m_latitude, p );
+                p *= 1.003f;
+                glVertex3fv( p.GetData() );
+            }
+            else if( prev )
+            {
+                // Subdivide the great-circle arc from prev to pt.  Use
+                // ~one segment per 2 deg of arc; clamps to [1, 32].
+                float dLon = pt->m_longitude - prev->m_longitude;
+                float dLat = pt->m_latitude  - prev->m_latitude;
+                float arcDeg = sqrtf( dLon * dLon + dLat * dLat );
+                int subs = (int) (arcDeg / 2.0f);
+                if( subs < 1  ) subs = 1;
+                if( subs > 32 ) subs = 32;
+
+                for( int k = 1; k <= subs; ++k )
+                {
+                    float u = (float) k / (float) subs;
+                    // True great-circle interpolation via the Phase 1
+                    // sphere primitives.  Promotes float->Fixed for the
+                    // slerp; result back to float for OpenGL.
+                    Fixed outLon, outLat;
+                    SphereGreatCircleInterpolate(
+                        Fixed::FromDouble( prev->m_longitude ),
+                        Fixed::FromDouble( prev->m_latitude  ),
+                        Fixed::FromDouble( pt->m_longitude   ),
+                        Fixed::FromDouble( pt->m_latitude    ),
+                        Fixed::FromDouble( u ),
+                        outLon, outLat );
+                    Vector3<float> p;
+                    LonLatToUnitVector( (float) outLon.DoubleValue(),
+                                        (float) outLat.DoubleValue(), p );
+                    p *= 1.003f;
+                    glVertex3fv( p.GetData() );
+                }
+            }
+
+            prev = pt;
+        }
+        if( inStroke ) glEnd();
+    }
+
+    glLineWidth( 1.0f );
 }
 
 
@@ -331,6 +498,7 @@ void GlobeRenderer::Render()
     glClear( GL_COLOR_BUFFER_BIT );
 
     RenderSphereFill();
+    RenderDayNightTerminator();   // Phase 4: shade night side
     RenderGuidelines();
     RenderCoastlines();
     RenderBorders();
@@ -338,6 +506,7 @@ void GlobeRenderer::Render()
     RenderTrails();
     RenderRadarOverlay();
     RenderExplosions();
+    RenderWhiteBoard();           // Phase 4: geodesic stroke arcs
 
     // Restore 2D for any UI overlay paths that follow.  UI overlay
     // reprojection is Phase 3 - Phase 0 acceptably mis-aligns it (per

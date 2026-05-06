@@ -69,6 +69,12 @@ protected:
     void    RenderTrails            ();
     void    RenderRadarOverlay      ();
     void    RenderExplosions        ();
+    // Phase 4: day/night terminator.  Darkens the half of the sphere
+    // facing away from the sun (sun longitude = world clock).
+    void    RenderDayNightTerminator();
+    // Phase 4: per-team whiteboard strokes drawn as great-circle arcs
+    // on the sphere instead of chord lines (SPEC_AMBIGUOUS-27 option A).
+    void    RenderWhiteBoard        ();
 
     static void LonLatToUnitVector  ( float longitude, float latitude, Vector3<float> &out );
 
