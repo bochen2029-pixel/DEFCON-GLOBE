@@ -273,11 +273,11 @@ bool Bomber::Update()
         m_longitude += m_vel.x * timePerUpdate;
         m_latitude += m_vel.y * timePerUpdate;
 
-        if( m_longitude <= -180.0f ||
-            m_longitude >= 180.0f )
-        {
-            CrossSeam();
-        }
+        // Phase 1: sphere has no seam.  This branch survives only as a
+        // longitude-wrap to keep [-180, 180) until the bomber Update is
+        // ported onto great-circle motion (Phase 2 polish).
+        if( m_longitude >=  180 ) m_longitude -= 360;
+        if( m_longitude <  -180 ) m_longitude += 360;
 
         if( m_range <= 0 )
         {

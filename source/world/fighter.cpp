@@ -172,11 +172,9 @@ bool Fighter::Update()
         m_longitude += m_vel.x * Fixed(timePerUpdate);
         m_latitude += m_vel.y * Fixed(timePerUpdate);
 
-        if( m_longitude <= -180 ||
-            m_longitude >= 180 )
-        {
-            CrossSeam();
-        }
+        // Phase 1: sphere has no seam.  Just wrap longitude.
+        if( m_longitude >=  180 ) m_longitude -= 360;
+        if( m_longitude <  -180 ) m_longitude += 360;
 
         if( m_range <= 0 )
         {

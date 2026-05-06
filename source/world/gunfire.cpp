@@ -159,17 +159,12 @@ bool GunFire::MoveToWaypoint()
 
     CalculateNewPosition( &newLongitude, &newLatitude, &newDistance );
 
-    // if the unit has reached the edge of the map, move it to the other side and update all nessecery information
-    if( m_longitude <= -180 ||
-        m_longitude >= 180 )
-    {
-        CrossSeam();
-        CalculateNewPosition( &newLongitude, &newLatitude, &newDistance );
-    }
+    // Phase 1: sphere has no seam.  Wrap longitude into [-180, 180).
+    if( m_longitude >=  180 ) m_longitude -= 360;
+    if( m_longitude <  -180 ) m_longitude += 360;
 
-    if( newDistance <= distToTarget && 
-        newDistance < Fixed::Hundredths(48) &&
-        m_targetLongitudeAcrossSeam == 0 )
+    if( newDistance <= distToTarget &&
+        newDistance < Fixed::Hundredths(48) )
     {
         ClearWaypoints();
         m_vel.Zero();

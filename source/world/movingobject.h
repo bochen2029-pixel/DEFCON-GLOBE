@@ -33,8 +33,8 @@ public:
     Fixed   m_finalTargetLatitude;
     int     m_targetNodeId;
 
-    Fixed   m_targetLongitudeAcrossSeam;
-    Fixed   m_targetLatitudeAcrossSeam;
+    // m_targetLongitudeAcrossSeam / m_targetLatitudeAcrossSeam removed
+    // in Phase 1 - the sphere has no seam (docs/DESIGN_v1.md section 27).
 
     Fixed   m_pathCalcTimer;
     bool    m_blockHistory;
@@ -60,7 +60,7 @@ public:
     virtual void    SetWaypoint     ( Fixed longitude, Fixed latitude );
 
     void            CalculateNewPosition( Fixed *newLongitude, Fixed *newLatitude, Fixed *newDistance );
-    void            CrossSeam();
+    // CrossSeam() deleted in Phase 1 - sphere has no seam.
 
     virtual int     GetAttackState  ();
     virtual bool    IsIdle          ();

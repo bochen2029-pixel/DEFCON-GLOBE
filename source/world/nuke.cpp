@@ -155,15 +155,10 @@ bool Nuke::Update()
     Fixed newLatitude = m_latitude + m_vel.y * timePerUpdate;
     Fixed newDistance = g_app->GetWorld()->GetDistance( newLongitude, newLatitude, m_targetLongitude, m_targetLatitude);
 
-    if( newLongitude <= -180 ||
-        newLongitude >= 180 )
-    {
-        m_longitude = newLongitude;
-        CrossSeam();
-
-        newLongitude = m_longitude;
-        newDistance = g_app->GetWorld()->GetDistance( newLongitude, newLatitude, m_targetLongitude, m_targetLatitude );
-    }
+    // Phase 1: sphere has no seam.  Wrap longitude into [-180, 180);
+    // Nuke gets a full great-circle Update in the next commit.
+    if( newLongitude >=  180 ) newLongitude -= 360;
+    if( newLongitude <  -180 ) newLongitude += 360;
 
     if( newDistance < 2 &&
         newDistance >= remainingDistance )

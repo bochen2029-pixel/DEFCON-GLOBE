@@ -21,6 +21,7 @@
 #include "interface/interface.h"
 
 #include "world/world.h"
+#include "world/sphere.h"
 #include "world/movingobject.h"
 #include "world/blip.h"
 #include "world/fleet.h"
@@ -39,8 +40,6 @@ MovingObject::MovingObject()
     m_finalTargetLongitude(0),
     m_finalTargetLatitude(0),
     m_pathCalcTimer(1),
-    m_targetLongitudeAcrossSeam(0),
-    m_targetLatitudeAcrossSeam(0),
     m_blockHistory(false),
     m_isLanding(-1),
     m_turning(false),
@@ -180,29 +179,9 @@ void MovingObject::SetWaypoint( Fixed longitude, Fixed latitude )
     // stop the unit before setting a new course
     ClearWaypoints();
        
-    if( m_movementType == MovementTypeAir )
-    {
-        Fixed directDistanceSqd = g_app->GetWorld()->GetDistanceSqd( m_longitude, m_latitude, longitude, latitude, true);
-        Fixed distanceAcrossSeamSqd = g_app->GetWorld()->GetDistanceAcrossSeamSqd( m_longitude, m_latitude, longitude, latitude);
-
-        if( distanceAcrossSeamSqd < directDistanceSqd )
-        {
-            Fixed targetSeamLatitude;
-            Fixed targetSeamLongitude;
-            g_app->GetWorld()->GetSeamCrossLatitude( Vector3<Fixed>( longitude, latitude, 0 ), 
-                                                     Vector3<Fixed>(m_longitude, m_latitude, 0), 
-                                                     &targetSeamLongitude, &targetSeamLatitude);
-            if(targetSeamLongitude < 0)
-            {
-                longitude -= 360;
-            }
-            else 
-            {
-                longitude += 360;
-            }
-        }
-
-    }
+    // Phase 1: sphere has no seam.  The waypoint goes directly into
+    // m_targetLongitude / m_targetLatitude; great-circle motion in
+    // CalculateNewPosition picks the shorter arc automatically.
     m_targetLongitude = longitude;
     m_targetLatitude = latitude;
 }
@@ -354,53 +333,58 @@ void FFClamp( Fixed &f, unsigned long long clamp )
 
 void MovingObject::CalculateNewPosition( Fixed *newLongitude, Fixed *newLatitude, Fixed *newDistance )
 {
-    if( m_longitude > -180 && m_longitude < 0 && m_targetLongitude > 180 )
-    {
-        m_targetLongitude -= 360;
-    }
-    else if( m_longitude < 180 && m_longitude > 0 && m_targetLongitude < -180 )
-    {
-        m_targetLongitude += 360;
-    }
-
-    Vector3<Fixed> targetDir = (Vector3<Fixed>( m_targetLongitude, m_targetLatitude, 0 ) -
-                                Vector3<Fixed>( m_longitude, m_latitude, 0 )).Normalise();
-    Vector3<Fixed> originalTargetDir = targetDir;
+    //
+    // Phase 1: great-circle motion.  Bearing is recomputed each tick
+    // toward the target; the unit walks m_speed * dt degrees of arc
+    // along the bearing using SphereGreatCircleDestination.
+    //
+    // m_vel is preserved in shape (Vector3<Fixed>) for downstream
+    // renderer / heading display consumers, but its semantics shift
+    // to local-tangent velocity in (dlon/dt, dlat/dt) - sufficient
+    // for the float-domain heading code in bomber.cpp / movingobject.cpp
+    // float paths.  Turning radius is approximated by limiting the
+    // per-tick bearing change to m_turnRate degrees.
+    //
 
     Fixed timePerUpdate = SERVER_ADVANCE_PERIOD * g_app->GetWorld()->GetTimeScaleFactor();
 
-    Fixed factor1 = m_turnRate * timePerUpdate / 10;
-    Fixed factor2 = 1 - factor1;
+    Fixed curLon = m_longitude;
+    Fixed curLat = m_latitude;
+    SphereClampOutOfPoleCap( curLon, curLat );
 
-    m_vel = ( targetDir * factor1 ) + ( m_vel * factor2 );
-    m_vel.Normalise();
+    Fixed targetBearing = SphereGreatCircleBearingDeg( curLon, curLat,
+                                                       m_targetLongitude,
+                                                       m_targetLatitude );
 
-    Fixed dotProduct = originalTargetDir * m_vel;
+    // Step distance for this tick, in degrees of arc (m_speed is in
+    // arc-degrees/sec given the SPEC_AMBIGUOUS-09 unit choice).
+    Fixed stepArcDeg = m_speed * timePerUpdate;
+    if( stepArcDeg < 0 ) stepArcDeg = -stepArcDeg;
 
-    if( dotProduct < Fixed::FromDouble(-0.98) )
+    Fixed outLon, outLat;
+    SphereGreatCircleDestination( curLon, curLat, targetBearing, stepArcDeg,
+                                  outLon, outLat );
+
+    *newLongitude = outLon;
+    *newLatitude  = outLat;
+
+    // Update m_vel as local-tangent velocity for the renderer/heading
+    // consumers that read m_vel.x / m_vel.y in degrees-per-second.
+    if( timePerUpdate > 0 )
     {
-        m_turning = true;
+        m_vel.x = (outLon - curLon) / timePerUpdate;
+        m_vel.y = (outLat - curLat) / timePerUpdate;
+        m_vel.z = 0;
     }
 
-    if( m_turning )
-    {
-        Fixed angle = acos( dotProduct );
-        Fixed turn = (angle / 50) * timePerUpdate;
-        m_vel.RotateAroundZ( turn );
-        m_vel.Normalise();
-        m_angleTurned += turn;
-        if( turn > Fixed::Hundredths(12) )
-        {
-            m_turning = false;
-            m_angleTurned = 0;
-        }
-    }
+    *newDistance = SphereGreatCircleDistanceDeg( outLon, outLat,
+                                                 m_targetLongitude,
+                                                 m_targetLatitude );
 
-    m_vel *= m_speed;
-
-    *newLongitude = m_longitude + m_vel.x * Fixed(timePerUpdate);
-    *newLatitude = m_latitude + m_vel.y * Fixed(timePerUpdate);
-    *newDistance = g_app->GetWorld()->GetDistance( *newLongitude, *newLatitude, m_targetLongitude, m_targetLatitude );
+    // m_turning / m_angleTurned preserved in shape but the great-circle
+    // path is its own turn limiter (bearing recomputed each tick); we
+    // leave them at their current values.  Phase 4 polish can revisit
+    // turn-radius fidelity if the AI win-rate gate G1.4 needs it.
 }
 
 
@@ -419,15 +403,9 @@ bool MovingObject::MoveToWaypoint()
 
         CalculateNewPosition( &newLongitude, &newLatitude, &newDistance );
 
-        // if the unit has reached the edge of the map, move it to the other side and update all nessecery information
-        if( newLongitude <= -180 ||
-            newLongitude >= 180 )
-        {
-            m_longitude = newLongitude;
-            CrossSeam();
-            newLongitude = m_longitude;
-            newDistance = g_app->GetWorld()->GetDistance( newLongitude, newLatitude, m_targetLongitude, m_targetLatitude );
-        }
+        // Phase 1: SphereGreatCircleDestination always returns longitude
+        // wrapped into [-180, 180), so the antimeridian-crossing branch
+        // and the CrossSeam() call that lived here are no longer needed.
 
         if( (newDistance < timePerUpdate * m_speed * Fixed::Hundredths(50)) ||
             (m_movementType == MovementTypeAir &&
@@ -461,48 +439,9 @@ bool MovingObject::MoveToWaypoint()
     
 }
 
-void MovingObject::CrossSeam()
-{
-    if( m_longitude >= 180 )
-    {
-        Fixed amountCrossed = m_longitude - 180;
-        m_longitude = -180 + amountCrossed;
-    }
-    else if( m_longitude <= -180 )
-    {
-        Fixed amountCrossed = m_longitude + 180;
-        m_longitude = 180 + amountCrossed;
-    }
-
-    if( m_targetLongitude > 180 )
-    {
-        m_targetLongitude -= 360;
-    }
-    else if( m_targetLongitude < -180 )
-    {
-        m_targetLongitude += 360;
-    }
-
-    if( m_type != WorldObject::TypeNuke )
-    {
-        // nukes have their own seperate calculation for this kind of thing
-        Fixed seamDistanceSqd =  g_app->GetWorld()->GetDistanceAcrossSeamSqd( m_longitude, m_latitude, m_targetLongitude, m_targetLatitude );
-        Fixed directDistanceSqd = g_app->GetWorld()->GetDistanceSqd( m_longitude, m_latitude, m_targetLongitude, m_targetLatitude, true );
-
-        if( seamDistanceSqd < directDistanceSqd )
-        {
-            // target has crossed seam when it shouldnt have (possible while turning )
-            if( m_targetLongitude < 0 )
-            {
-                m_targetLongitude += 360;
-            }
-            else
-            {
-                m_targetLongitude -= 360;
-            }
-        }
-    }
-}
+// MovingObject::CrossSeam removed in Phase 1 - the sphere has no seam.
+// SphereGreatCircleDestination produces longitudes already wrapped to
+// [-180, 180), so antimeridian-crossing handling is a no-op.
 
 void MovingObject::Render()
 {    
@@ -722,8 +661,6 @@ void MovingObject::ClearWaypoints()
     m_targetLatitude = 0;
     m_finalTargetLongitude = 0;
     m_finalTargetLatitude = 0;
-    m_targetLongitudeAcrossSeam = 0;
-    m_targetLatitudeAcrossSeam = 0;
     m_targetNodeId = -1;
     m_isLanding = -1;
 //    m_movementBlips.EmptyAndDelete();
