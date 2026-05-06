@@ -128,6 +128,15 @@
 #define     NET_DEFCON_LATTITUDE2                   "dy"
 // Phase 2 wire fields (SPEC_AMBIGUOUS-08 quantization: 16-bit metres for
 // surface units, 32-bit metres for nukes).
+//
+// Note: this token is reserved but not currently piped through the
+// player-action commands (RequestPlacement / RequestAction /
+// RequestSetWaypoint / RequestSpecialAction).  Reasoning: those
+// commands carry the *target* of a player click, which is always a
+// surface (lon, lat) point - the unit's m_altitude is determined by
+// unit type and state, server-authoritative, and propagated via the
+// world-state sync.  If a future feature needs explicit per-command
+// target altitude (e.g. "intercept at altitude X"), it lands here.
 #define     NET_DEFCON_ALTITUDE                     "dz"
 #define     NET_DEFCON_SCORE                        "da"
 #define     NET_DEFCON_LASTPROCESSEDSEQID           "z"

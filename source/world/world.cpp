@@ -2203,7 +2203,7 @@ bool World::CanSetTimeFactor( Fixed factor )
 
 
 bool World::IsVisible( Fixed longitude, Fixed latitude, int teamId )
-{       
+{
     if( teamId == -1 ) return false;
 
     //
@@ -2234,6 +2234,69 @@ bool World::IsVisible( Fixed longitude, Fixed latitude, int teamId )
 
     //
     // Nope, can't see it
+
+    return false;
+}
+
+
+//
+// Phase 2 altitude-aware visibility.  For ground targets identical to
+// IsVisible above.  For airborne targets we additionally test against
+// per-radar horizon-extended visibility, so a bomber at altitude is
+// detected from further away than the ground-horizon coverage cell
+// (which is built assuming target_alt = 0 in world.cpp's
+// AddCoverage / UpdateCoverage callers).
+//
+// Per-radar sweep is O(teams * objects); acceptable for Phase 2
+// (radars are a small fraction of m_objects).  Phase 4 polish can
+// move this to a spatial index if profiling justifies it.
+//
+bool World::IsVisibleAtAltitude( Fixed longitude, Fixed latitude, Fixed altitude, int teamId )
+{
+    if( teamId == -1 ) return false;
+
+    // Cell-coverage (ground-horizon) test - cheap, handles the common case.
+    if( IsVisible( longitude, latitude, teamId ) )
+    {
+        return true;
+    }
+
+    // For ground or sub-surface targets the cell test is authoritative.
+    if( altitude <= 0 ) return false;
+
+    // Airborne target: sweep all radars (any object with positive
+    // GetRadarRange()).  A radar sees the target iff
+    // great-circle distance <= horizon(observer.alt, target.alt).
+    for( int i = 0; i < m_objects.Size(); ++i )
+    {
+        if( !m_objects.ValidIndex( i ) ) continue;
+        WorldObject *obs = m_objects[i];
+        if( !obs ) continue;
+
+        Fixed obsRange = obs->GetRadarRange();
+        if( obsRange <= 0 ) continue;
+
+        // Visible to teamId iff observer is teamId or an ally sharing radar.
+        bool sees = false;
+        if( obs->m_teamId == teamId )
+        {
+            sees = true;
+        }
+        else if( obs->m_teamId >= 0 && obs->m_teamId < m_teams.Size() )
+        {
+            Team *obsTeam = m_teams[ obs->m_teamId ];
+            if( obsTeam && obsTeam->m_sharingRadar[teamId] )
+            {
+                sees = true;
+            }
+        }
+        if( !sees ) continue;
+
+        Fixed gc = SphereGreatCircleDistanceDeg( obs->m_longitude, obs->m_latitude,
+                                                 longitude, latitude );
+        Fixed horizon = SphereHorizonArcDeg( obs->m_altitude, altitude );
+        if( gc <= horizon ) return true;
+    }
 
     return false;
 }
@@ -2287,7 +2350,12 @@ void World::UpdateRadar()
             for( int k = 0; k < m_teams.Size(); ++k )
             {
                 Team *team = m_teams[k];
-                potential->m_visible[team->m_teamId] = IsVisible( potential->m_longitude, potential->m_latitude, team->m_teamId );
+                // Phase 2: airborne potentials use the altitude-aware
+                // overload so high-altitude bombers are detected from
+                // beyond the ground-horizon coverage cell.
+                potential->m_visible[team->m_teamId] = ( potential->m_altitude > 0 )
+                    ? IsVisibleAtAltitude( potential->m_longitude, potential->m_latitude, potential->m_altitude, team->m_teamId )
+                    : IsVisible          ( potential->m_longitude, potential->m_latitude,                       team->m_teamId );
             }
         }
     }

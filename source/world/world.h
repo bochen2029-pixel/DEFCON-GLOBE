@@ -166,6 +166,13 @@ public:
     void CreateExplosion    ( int teamId, Fixed longitude, Fixed latitude, Fixed intensity, int targetTeamId=-1 );
 
     bool IsVisible          ( Fixed longitude, Fixed latitude, int teamId );
+    // Phase 2: altitude-aware overload.  For ground targets (alt = 0)
+    // identical to the lon/lat form.  For airborne targets (alt > 0)
+    // also tests against per-radar horizon-extended visibility, so a
+    // bomber at altitude is detected from further away than the
+    // ground-horizon coverage cell would imply.  See SPEC_AMBIGUOUS-16
+    // (refraction omitted in Phase 2).
+    bool IsVisibleAtAltitude( Fixed longitude, Fixed latitude, Fixed altitude, int teamId );
 
     void ObjectPlacement        ( int teamId, int unitType, Fixed longitude, Fixed latitude, int fleetId );
     void ObjectStateChange      ( int objectId, int newState );
