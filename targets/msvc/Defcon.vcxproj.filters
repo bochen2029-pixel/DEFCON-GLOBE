@@ -384,6 +384,9 @@
     <ClCompile Include="..\..\source\world\worldobject.cpp">
       <Filter>world</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\source\world\sphere.cpp">
+      <Filter>world</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\contrib\SystemIV\contrib\XCrashReport\client\exception_handler.cpp">
       <Filter>contrib\XCrashReport\client</Filter>
     </ClCompile>
@@ -862,6 +865,9 @@
       <Filter>world</Filter>
     </ClInclude>
     <ClInclude Include="..\..\source\world\world.h">
+      <Filter>world</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\source\world\sphere.h">
       <Filter>world</Filter>
     </ClInclude>
     <ClInclude Include="..\..\source\world\worldobject.h">

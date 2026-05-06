@@ -1105,6 +1105,7 @@
     </ClCompile>
     <ClCompile Include="..\..\source\renderer\globe_renderer.cpp" />
     <ClCompile Include="..\..\source\test\determinism_harness.cpp" />
+    <ClCompile Include="..\..\source\world\sphere.cpp" />
     <ClCompile Include="..\..\source\renderer\map_renderer.cpp">
       <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug Steam|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug Steam|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -1982,6 +1983,7 @@
     <ClInclude Include="..\..\source\renderer\lobby_renderer.h" />
     <ClInclude Include="..\..\source\renderer\globe_renderer.h" />
     <ClInclude Include="..\..\source\test\determinism_harness.h" />
+    <ClInclude Include="..\..\source\world\sphere.h" />
     <ClInclude Include="..\..\source\renderer\map_renderer.h" />
     <ClInclude Include="..\..\source\network\ClientToServer.h" />
     <ClInclude Include="..\..\source\network\network_defines.h" />
