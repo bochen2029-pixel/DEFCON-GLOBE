@@ -18,6 +18,7 @@
 #include "renderer/map_renderer.h"
 
 #include "world/world.h"
+#include "world/sphere.h"
 #include "world/nuke.h"
 #include "world/team.h"
 #include "world/city.h"
@@ -70,9 +71,12 @@ void Nuke::SetWaypoint( Fixed longitude, Fixed latitude )
     }
     MovingObject::SetWaypoint( longitude, latitude );
 
-    Vector3<Fixed> target( m_targetLongitude, m_targetLatitude, 0 );
-    Vector3<Fixed> pos( m_longitude, m_latitude, 0 );
-    m_totalDistance = (target - pos).Mag();
+    // Phase 1: m_totalDistance is the great-circle distance (degrees of
+    // arc).  m_curveDirection retained for save compatibility but no
+    // longer used by the ground-track integration; Phase 2 removes it
+    // alongside the save-format bump.
+    m_totalDistance = SphereGreatCircleDistanceDeg( m_longitude, m_latitude,
+                                                    m_targetLongitude, m_targetLatitude );
 
     if( m_targetLongitude >= m_longitude )
     {
@@ -125,40 +129,47 @@ bool Nuke::Update()
 
 
     //
-    // Move towards target
+    // Phase 1: ground track is a great circle.  m_curveDirection-driven
+    // fake-2D-arc replaced; altitude (apogee) is still 0 in Phase 1 and
+    // arrives in Phase 2 (docs/DESIGN_v1.md section 28, SPEC_AMBIGUOUS-11
+    // option A).
+    //
+    // m_speed is in arc-degrees/sec (SPEC_AMBIGUOUS-09 unit choice);
+    // step distance per tick is m_speed * dt.  m_totalDistance is the
+    // initial great-circle distance set when the waypoint was assigned;
+    // fractionDistance is 0 at launch and 1 at impact.
+    //
 
-    Vector3<Fixed> target( m_targetLongitude, m_targetLatitude, 0 );
-    Vector3<Fixed> pos( m_longitude, m_latitude, 0 );
-    Fixed remainingDistance = (target - pos).Mag();
-    Fixed fractionDistance = 1 - remainingDistance / m_totalDistance;
+    Fixed remainingDistance = SphereGreatCircleDistanceDeg( m_longitude, m_latitude,
+                                                            m_targetLongitude, m_targetLatitude );
+    Fixed fractionDistance = ( m_totalDistance > 0 )
+                           ? ( 1 - remainingDistance / m_totalDistance )
+                           : Fixed(0);
 
-    Vector3<Fixed> front = (target - pos).Normalise();  
-    Fixed fractionNorth = 5 * m_latitude.abs() / ( 200 / 2 );
-    fractionNorth = max( fractionNorth, 3 );
-    
-    front.RotateAroundZ( Fixed::PI / (fractionNorth * m_curveDirection) );
-    front.RotateAroundZ( fractionDistance * (-m_curveDirection * Fixed::PI/fractionNorth) );
+    Fixed bearing = SphereGreatCircleBearingDeg( m_longitude, m_latitude,
+                                                 m_targetLongitude, m_targetLatitude );
 
-    if( pos.y > 85 )
+    // Speed profile: ramp-up so launch is slower than impact.  Preserves
+    // the original "m_speed/2 + m_speed/2 * fractionDistance^2" feel.
+    Fixed effectiveSpeed = m_speed / 2 + m_speed / 2 * fractionDistance * fractionDistance;
+    Fixed stepArcDeg = effectiveSpeed * timePerUpdate;
+    if( stepArcDeg < 0 ) stepArcDeg = -stepArcDeg;
+
+    Fixed newLongitude, newLatitude;
+    SphereGreatCircleDestination( m_longitude, m_latitude, bearing, stepArcDeg,
+                                  newLongitude, newLatitude );
+
+    // m_vel preserved as local-tangent velocity for renderer / heading
+    // consumers (m_vel.x = dlon/dt, m_vel.y = dlat/dt).
+    if( timePerUpdate > 0 )
     {
-        // We are dangerously far north
-        // Make sure we dont go off the top of the world
-        Fixed extremeFractionNorth = (pos.y - 85) / 15;
-        Clamp( extremeFractionNorth, Fixed(0), Fixed(1) );
-        front.y *= ( 1 - extremeFractionNorth );
-        front.Normalise();
+        m_vel.x = (newLongitude - m_longitude) / timePerUpdate;
+        m_vel.y = (newLatitude  - m_latitude ) / timePerUpdate;
+        m_vel.z = 0;
     }
 
-    m_vel = Vector3<Fixed>(front * (m_speed/2 + m_speed/2 * fractionDistance * fractionDistance));
-       
-    Fixed newLongitude = m_longitude + m_vel.x * timePerUpdate;
-    Fixed newLatitude = m_latitude + m_vel.y * timePerUpdate;
-    Fixed newDistance = g_app->GetWorld()->GetDistance( newLongitude, newLatitude, m_targetLongitude, m_targetLatitude);
-
-    // Phase 1: sphere has no seam.  Wrap longitude into [-180, 180);
-    // Nuke gets a full great-circle Update in the next commit.
-    if( newLongitude >=  180 ) newLongitude -= 360;
-    if( newLongitude <  -180 ) newLongitude += 360;
+    Fixed newDistance = SphereGreatCircleDistanceDeg( newLongitude, newLatitude,
+                                                      m_targetLongitude, m_targetLatitude );
 
     if( newDistance < 2 &&
         newDistance >= remainingDistance )
@@ -172,7 +183,7 @@ bool Nuke::Update()
     }
     else
     {
-        m_range -= Vector3<Fixed>( m_vel.x * Fixed(timePerUpdate), m_vel.y * Fixed(timePerUpdate), 0 ).Mag();
+        m_range -= stepArcDeg;
         if( m_range <= 0 )
         {
             m_life = 0;
