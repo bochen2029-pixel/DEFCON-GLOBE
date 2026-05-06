@@ -3,8 +3,21 @@
 
 
 /*
+ *      Wire protocol version (docs/DESIGN_v1.md section 22, invariant
+ *      I-6).  Bumped on every breaking change to the wire format.
+ *      Mismatched clients must refuse to connect with a clear
+ *      diagnostic.  SPEC_AMBIGUOUS-29 resolution.
+ *
+ *        1   - Phase 0 / Phase 1 baseline
+ *        2   - Phase 2: m_altitude added to position/waypoint commands;
+ *               great-circle ground-track for nukes; radar horizon
+ */
+#define     PROTOCOL_VERSION                        2
+
+
+/*
  *	    Put this define in place if you want the optimised network symbols
- *      to be replaced with human readable symbols 
+ *      to be replaced with human readable symbols
  *      (much higher bandwidth usage)
  *
  */
@@ -113,6 +126,9 @@
 #define     NET_DEFCON_RANDSEED                     "dw"
 #define     NET_DEFCON_LONGITUDE2                   "dx"
 #define     NET_DEFCON_LATTITUDE2                   "dy"
+// Phase 2 wire fields (SPEC_AMBIGUOUS-08 quantization: 16-bit metres for
+// surface units, 32-bit metres for nukes).
+#define     NET_DEFCON_ALTITUDE                     "dz"
 #define     NET_DEFCON_SCORE                        "da"
 #define     NET_DEFCON_LASTPROCESSEDSEQID           "z"
 #define     NET_DEFCON_SYNCVALUE                    "v"
@@ -139,6 +155,7 @@
 #define     NET_DEFCON_SETMODPATH                   "sn"
 #define     NET_DEFCON_VERSION                      "so"
 #define     NET_DEFCON_SYSTEMTYPE                   "sp"
+#define     NET_DEFCON_PROTOCOL_VERSION             "sq"
 #define     NET_DEFCON_SEQID                        "i"
 #define     NET_DEFCON_LASTSEQID                    "l"
 

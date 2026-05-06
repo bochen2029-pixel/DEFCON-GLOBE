@@ -686,6 +686,9 @@ void Server::SendClientId( int _clientId )
         letter->m_data->CreateData( NET_DEFCON_CLIENTID, _clientId );
         letter->m_data->CreateData( NET_DEFCON_SEQID, -1 );
         letter->m_data->CreateData( NET_DEFCON_VERSION, APP_VERSION );
+        // Phase 2 wire-protocol version (SPEC_AMBIGUOUS-29 resolution).
+        // Mismatched clients must refuse the connection.
+        letter->m_data->CreateData( NET_DEFCON_PROTOCOL_VERSION, PROTOCOL_VERSION );
         letter->m_receiverId = _clientId;
         
         m_outboxMutex->Lock();

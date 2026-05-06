@@ -359,6 +359,25 @@ bool ProcessServerLetters( Directory *letter )
             AppDebugOut( "CLIENT : Server version is %s\n", serverVersion );
         }
 
+        // Phase 2 wire-protocol-version check (SPEC_AMBIGUOUS-29).  If
+        // the server reports a different PROTOCOL_VERSION than ours,
+        // refuse the connection.  Servers that pre-date this field are
+        // assumed to be Phase 1 / version 1.
+        {
+            int serverProtocol = 1;
+            if( letter->HasData( NET_DEFCON_PROTOCOL_VERSION, DIRECTORY_TYPE_INT ) )
+            {
+                serverProtocol = letter->GetDataInt( NET_DEFCON_PROTOCOL_VERSION );
+            }
+            if( serverProtocol != PROTOCOL_VERSION )
+            {
+                AppDebugOut( "CLIENT : Protocol version mismatch (server=%d, client=%d) - refusing connection\n",
+                             serverProtocol, PROTOCOL_VERSION );
+                g_app->GetClientToServer()->m_connectionState = ClientToServer::StateDisconnected;
+                return true;
+            }
+        }
+
         if( !VersionManager::DoesSupportModSystem( g_app->GetClientToServer()->m_serverVersion ) )
         {
             // This server is too old to support Mods, so make sure we de-activate any critical ones
