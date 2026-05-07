@@ -67,6 +67,16 @@ public:
     bool    m_critical;
     bool    m_active;
 
+    // Phase 5: SPEC_AMBIGUOUS-33 resolution.  m_touchesMapData is true
+    // when the mod overrides any of the earth/* files in
+    // data/critical_files.txt (coastlines, sailable water bitmap, city
+    // database, travel nodes, territory bitmaps).  Those files encode
+    // the equirectangular 2D world and are semantically meaningless on
+    // the sphere; a Phase 2+ build refuses to load such mods with a
+    // clear diagnostic.  Asset-only mods (sounds, icons, language
+    // strings) are still allowed.
+    bool    m_touchesMapData;
+
 public:
     InstalledMod();
 };

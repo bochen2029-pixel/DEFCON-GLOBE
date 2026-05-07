@@ -302,7 +302,13 @@ void ModSystem::LoadModData( InstalledMod *_mod, char *_path )
     }
 
     //
-    // Determine if this is a critical mod or not
+    // Determine if this is a critical mod or not, and whether it
+    // touches the equirectangular map data (Phase 5 SPEC_AMBIGUOUS-33).
+    //
+    // m_critical:        any file in data/critical_files.txt overridden
+    // m_touchesMapData:  any earth/* file overridden - those encode the
+    //                    flat 2D world and are semantically meaningless
+    //                    on the sphere
 
     for( int i = 0; i < m_criticalFiles.Size(); ++i )
     {
@@ -312,7 +318,11 @@ void ModSystem::LoadModData( InstalledMod *_mod, char *_path )
         if( DoesFileExist( fullPath ) )
         {
             _mod->m_critical = true;
-            break;
+            // earth/* files identify a "map mod".
+            if( strncmp( m_criticalFiles[i], "earth/", 6 ) == 0 )
+            {
+                _mod->m_touchesMapData = true;
+            }
         }
     }
 }
@@ -335,9 +345,24 @@ void ModSystem::ActivateMod( char *_mod, char *_version )
     {
         InstalledMod *mod = m_mods[i];
 
-        if( strcmp( mod->m_name, _mod ) == 0 && 
+        if( strcmp( mod->m_name, _mod ) == 0 &&
             strcmp( mod->m_version, _version ) == 0 )
         {
+            // Phase 5 SPEC_AMBIGUOUS-33: refuse map mods on a sphere
+            // build.  Asset-only mods (sounds, icons, language) load
+            // unchanged.  The 2D equirectangular bitmaps are
+            // semantically meaningless on the sphere - silent
+            // reinterpretation would corrupt gameplay.
+            if( mod->m_touchesMapData )
+            {
+                AppDebugOut( "Mod \"%s\" version \"%s\" touches earth/* map "
+                             "data - refused on sphere build.  Repackage "
+                             "as asset-only (sounds / icons / language) "
+                             "and the mod will load.\n",
+                             mod->m_name, mod->m_version );
+                continue;     // skip without activating
+            }
+
             mod->m_active = true;
             if( i != 0 )
             {
@@ -721,7 +746,8 @@ void ModSystem::Commit()
 
 InstalledMod::InstalledMod()
 :   m_active(false),
-    m_critical(false)
+    m_critical(false),
+    m_touchesMapData(false)
 {
     sprintf( m_name,    "unknown" );
     sprintf( m_version, "unknown" );
